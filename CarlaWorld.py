@@ -15,13 +15,15 @@ from WeatherSelector import WeatherSelector
 
 
 class CarlaWorld:
-    def __init__(self, HDF5_file):
+    def __init__(self, HDF5_file, map_name='Town10HD'):
         self.HDF5_file = HDF5_file
         # Carla initialization
         client = carla.Client('localhost', 2000)
         client.set_timeout(20.0)
-        #self.world = client.load_world('Town01')
-        self.world = client.get_world()
+        #########################
+        self.world = client.load_world(map_name)
+        # self.world = client.get_world()
+        #########################
         print('Successfully connected to CARLA')
         self.blueprint_library = self.world.get_blueprint_library()
         # Sensors stuff
@@ -102,18 +104,75 @@ class CarlaWorld:
         depth_meters = normalized_depth * 1000
         return depth_meters
 
-    def get_bb_data(self):
+    def get_bb_data(self, sensor_height=None, sensor_width=None):
+
         vehicles_on_world = self.world.get_actors().filter('vehicle.*')
         walkers_on_world = self.world.get_actors().filter('walker.*')
         bounding_boxes_vehicles = ClientSideBoundingBoxes.get_bounding_boxes(vehicles_on_world, self.rgb_camera)
         bounding_boxes_walkers = ClientSideBoundingBoxes.get_bounding_boxes(walkers_on_world, self.rgb_camera)
-        return [bounding_boxes_vehicles, bounding_boxes_walkers]
+
+        ##########
+        # todo: filter 'traffic light' and 'traffic sign' here
+        def get_image_point(loc, K, w2c):
+            # Calculate 2D projection of 3D coordinate
+
+            # Format the input coordinate (loc is a carla.Position object)
+            point = np.array([loc.x, loc.y, loc.z, 1])
+            # transform to camera coordinates
+            point_camera = np.dot(w2c, point)
+
+            # New we must change from UE4's coordinate system to an "standard"
+            # (x, y ,z) -> (y, -z, x)
+            # and we remove the fourth componebonent also
+            point_camera = [point_camera[1], -point_camera[2], point_camera[0]]
+
+            # now project 3D->2D using the camera matrix
+            point_img = np.dot(K, point_camera)
+            # normalize
+            point_img[0] /= point_img[2]
+            point_img[1] /= point_img[2]
+
+            return point_img
+
+        def build_projection_matrix(w, h, fov):
+            focal = w / (2.0 * np.tan(fov * np.pi / 360.0))
+            K = np.identity(3)
+            K[0, 0] = K[1, 1] = focal
+            K[0, 2] = w / 2.0
+            K[1, 2] = h / 2.0
+            return K
+
+        bb_traffic_lights = self.world.get_level_bbs(carla.CityObjectLabel.TrafficLight)
+        bb_traffic_signs = self.world.get_level_bbs(carla.CityObjectLabel.TrafficSigns)
+
+        world_2_camera = np.array(self.rgb_camera.get_transform().get_inverse_matrix())
+        K = build_projection_matrix(sensor_width, sensor_height, 90)
+
+        bounding_boxes_traffic_lights = []
+        bounding_boxes_traffic_signs = []
+
+        for bb in bb_traffic_lights:
+            bounding_boxes_traffic_lights.append(
+                np.stack(
+                    [get_image_point(v, K, world_2_camera) for v in bb.get_world_vertices(carla.Transform())], axis=1
+                ).transpose()
+            )
+        for bb in bb_traffic_signs:
+            bounding_boxes_traffic_signs.append(
+                np.stack(
+                    [get_image_point(v, K, world_2_camera) for v in bb.get_world_vertices(carla.Transform())], axis=1
+                ).transpose()
+            )
+        ##########
+        return [
+            bounding_boxes_vehicles, bounding_boxes_walkers, bounding_boxes_traffic_lights, bounding_boxes_traffic_signs
+        ]
 
     def process_rgb_img(self, img, sensor_width, sensor_height):
         img = np.array(img.raw_data)
         img = img.reshape((sensor_height, sensor_width, 4))
         img = img[:, :, :3]  # taking out opacity channel
-        bb = self.get_bb_data()
+        bb = self.get_bb_data(sensor_height, sensor_width)
         return img, bb
 
     def remove_sensors(self):
@@ -130,12 +189,18 @@ class CarlaWorld:
         self.put_rgb_sensor(ego_vehicle, sensor_width, sensor_height, fov)
         self.put_depth_sensor(ego_vehicle, sensor_width, sensor_height, fov)
 
+        ##########################
+        # ADD HERE
+        ##########################
+
         # Begin applying the sync mode
         with CarlaSyncMode(self.world, self.rgb_camera, self.depth_camera, fps=30) as sync_mode:
             # Skip initial frames where the car is being put on the ambient
             if self.first_time_simulating:
                 for _ in range(30):
                     sync_mode.tick_no_data()
+
+            # todo： build projector camera (depth camera) array here and project data
 
             while True:
                 if current_ego_recorded_frames == frames_to_record_one_ego:

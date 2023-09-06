@@ -36,6 +36,7 @@ class ClientSideBoundingBoxes(object):
         cords_y_minus_z_x = np.concatenate([cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
         bbox = np.transpose(np.dot(camera.calibration, cords_y_minus_z_x))
         camera_bbox = np.concatenate([bbox[:, 0] / bbox[:, 2], bbox[:, 1] / bbox[:, 2], bbox[:, 2]], axis=1)
+        # print('camera box shape:', camera_bbox.shape)
         return camera_bbox
 
     @staticmethod

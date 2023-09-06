@@ -13,8 +13,14 @@ class HDF5Saver:
         self.depth_group = self.file.create_group("depth")
         self.ego_speed_group = self.file.create_group("ego_speed")
         self.bounding_box_group = self.file.create_group("bounding_box")
+
         self.bb_vehicles_group = self.bounding_box_group.create_group("vehicles")
         self.bb_walkers_group = self.bounding_box_group.create_group("walkers")
+        #########################
+        # todo: add 'traffic light' 'traffic sign' groups in 'bbox group' if possible
+        self.bb_lights_group = self.bounding_box_group.create_group("lights")
+        self.bb_signs_group = self.bounding_box_group.create_group("signs")
+        #########################
         self.timestamp_group = self.file.create_group("timestamps")
 
         # Storing metadata
@@ -31,12 +37,18 @@ class HDF5Saver:
                                                     "(time.time()*1000 in python3)"
 
     def record_data(self, rgb_array, depth_array, bounding_box, ego_speed, timestamp):
+
         timestamp = str(timestamp)
         self.rgb_group.create_dataset(timestamp, data=rgb_array)
         self.depth_group.create_dataset(timestamp, data=depth_array)
         self.ego_speed_group.create_dataset(timestamp, data=ego_speed)
         self.bb_vehicles_group.create_dataset(timestamp, data=bounding_box[0])
         self.bb_walkers_group.create_dataset(timestamp, data=bounding_box[1])
+        #################
+        # todo: save record data...add arg here
+        self.bb_lights_group.create_dataset(timestamp, data=bounding_box[2])
+        self.bb_signs_group.create_dataset(timestamp, data=bounding_box[3])
+        ################
 
     def record_all_timestamps(self, timestamps_list):
         self.timestamp_group.create_dataset("timestamps", data=np.array(timestamps_list))

@@ -10,17 +10,37 @@ def apply_filters_to_3d_bb(bb_3d_data, depth_array, sensor_width, sensor_height)
     # Bounding Box processing
     bb_3d_vehicles = bb_3d_data[0]
     bb_3d_walkers = bb_3d_data[1]
+    #########################
+    bb_3d_lights = bb_3d_data[2]
+    bb_3d_signs = bb_3d_data[3]
+    #########################
 
     # Depth + bb coordinate check
     valid_bb_vehicles = filter_bounding_boxes(bb_3d_vehicles, depth_array, sensor_width, sensor_height, actor='vehicle')
     valid_bb_walkers = filter_bounding_boxes(bb_3d_walkers, depth_array, sensor_width, sensor_height, actor='walker')
-
+    #########################
+    # todo: to get bbox of 'traffic light' and 'traffic sign'
+    valid_bb_lights = filter_bounding_boxes(bb_3d_lights, depth_array, sensor_width, sensor_height, actor='lights')
+    valid_bb_signs = filter_bounding_boxes(bb_3d_signs, depth_array, sensor_width, sensor_height, actor='signs')
+    #########################
     # Transform to np array for later easier saving
     if valid_bb_vehicles.size == 0:
         valid_bb_vehicles = np.asarray([-1, -1, -1, -1])
     if valid_bb_walkers.size == 0:
         valid_bb_walkers = np.asarray([-1, -1, -1, -1])
-    valid_bbs = np.asarray([valid_bb_vehicles.ravel(), valid_bb_walkers.ravel()])  # Flattening the arrays
+    #########################
+    if valid_bb_lights.size == 0:
+        valid_bb_lights = np.asarray([-1, -1, -1, -1])
+    if valid_bb_signs.size == 0:
+        valid_bb_signs = np.asarray([-1, -1, -1, -1])
+    #########################
+
+    valid_bbs = np.asarray([
+        valid_bb_vehicles.ravel(),
+        valid_bb_walkers.ravel(),
+        valid_bb_lights.ravel(),
+        valid_bb_signs.ravel(),
+    ], dtype=object)  # Flattening the arrays
     return valid_bbs
 
 
@@ -28,15 +48,21 @@ def filter_bounding_boxes(bb_data, depth_data, frame_width, frame_height, actor)
     good_bounding_boxes = []
     bb_data = np.array(bb_data)
     depth_data = np.transpose(depth_data)
-    assert actor=="vehicle" or actor=="walker"
+    assert actor == "vehicle" or actor == "walker" or actor == "lights" or actor == 'signs'
     if actor == "vehicle":
-        bounds = [-0.40*frame_width, 1.40*frame_width, -0.40*frame_height, 1.40*frame_height]
+        bounds = [-0.40 * frame_width, 1.40 * frame_width, -0.40 * frame_height, 1.40 * frame_height]
     elif actor == "walker":
         bounds = [0, frame_width, 0, frame_height]
+    ##########################
+    elif actor == 'lights':
+        bounds = [0, frame_width, 0, frame_height]
+    elif actor == 'signs':
+        bounds = [0, frame_width, 0, frame_height]
+    ##########################
 
     for actor_bb_3d in bb_data:
         # Apply some medium constraining on the data to not exclude every impossible point
-        possible_bb_3d_points = np.array([x for x in actor_bb_3d if 
+        possible_bb_3d_points = np.array([x for x in actor_bb_3d if
                                         bounds[0] <= x[0] <= bounds[1] and bounds[2] <= x[1] <= bounds[3]])
         if len(possible_bb_3d_points) < 2:  # You can't have a box with only one point!
             continue
@@ -79,7 +105,7 @@ def tighten_bbox_points(possible_bb_3d_points, depth_data):
     if visible_points_status.count(True) == 4 or visible_points_status.count(True) == 3:
         xmin, ymin, xmax, ymax = check_if_bbox_has_too_much_occlusion(possible_bb_3d_points, depth_data)
         color_idx = '3or4'
-    
+
     # A pair of points occluded
     elif visible_points_status.count(True) == 2:
         xmin, ymin, xmax, ymax = get_bbox_for_2_visible_points(possible_bb_3d_points, depth_data, visible_points_status)
@@ -88,11 +114,11 @@ def tighten_bbox_points(possible_bb_3d_points, depth_data):
     elif visible_points_status.count(True) == 1:
         xmin, ymin, xmax, ymax = get_bbox_for_1_visible_point(possible_bb_3d_points, depth_data, visible_points_status)
         color_idx = '1'
-    
+
     elif visible_points_status.count(True) == 0:
         xmin, ymin, xmax, ymax = None, None, None, None
         color_idx = '0'
-    
+
     return xmin, ymin, xmax, ymax, color_idx
 
 def check_visible_points(possible_bb_3d_points, depth_data):

@@ -44,8 +44,12 @@ if __name__ == "__main__":
     parser.add_argument('-he', '--height', default=768, type=int, help="camera rgb and depth sensor width in pixels")
     parser.add_argument('-ve', '--vehicles', default=0, type=int, help="number of vehicles to spawn in the simulation")
     parser.add_argument('-wa', '--walkers', default=0, type=int, help="number of walkers to spawn in the simulation")
+
+    parser.add_argument('-map', '--map', default='Town10HD', help="number of walkers to spawn in the simulation")
+
     parser.add_argument('-v', '--video', action="store_true", help="record a mp4 video on top of the recorded hdf5 file")
     parser.add_argument('-d', '--depth', action='store_true', help="show the depth video side by side with the rgb")
+
     args = parser.parse_args()
     assert(args.hdf5_file is not None)
     assert(args.width > 0 and args.height > 0)
@@ -61,7 +65,7 @@ if __name__ == "__main__":
     # Beginning data capture proccedure
     HDF5_file = HDF5Saver(sensor_width, sensor_height, os.path.join("data", args.hdf5_file + ".hdf5"))
     print("HDF5 File opened")
-    CarlaWorld = CarlaWorld(HDF5_file=HDF5_file)
+    CarlaWorld = CarlaWorld(HDF5_file=HDF5_file, map_name=args.map)
 
     timestamps = []
     egos_to_run = 13
