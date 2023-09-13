@@ -1,6 +1,11 @@
-# Carla (0.9.6) dataset collector :car: :floppy_disk:
+# Carla dataset collector :car: :floppy_disk:
 
-Script used for collecting data on CARLA version 0.9.6. This repository was created mainly by adapting the example python scripts from the carla repository.
+## WAHT'S NEW
+*
+*
+*
+
+Script used for collecting data on CARLA version 0.9.6 (updated to 0.9.13). This repository was created mainly by adapting the example python scripts from the carla repository.
 
 Types of data captured include RGB, depth and bounding box of vehicles and pedestrians collection. Other types of data (semantic segmentation, lidar, ...) are not yet implemented, but could be by following the same data structure. Here is a sample of the collected data on Town02:
 
