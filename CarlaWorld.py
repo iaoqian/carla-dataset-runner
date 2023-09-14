@@ -13,6 +13,8 @@ from set_synchronous_mode import CarlaSyncMode
 from bb_filter import apply_filters_to_3d_bb
 from WeatherSelector import WeatherSelector
 
+from PatchProjector import PatchProjector
+
 
 class CarlaWorld:
     def __init__(self, HDF5_file, map_name='Town10HD'):
@@ -190,7 +192,10 @@ class CarlaWorld:
         self.put_depth_sensor(ego_vehicle, sensor_width, sensor_height, fov)
 
         ##########################
-        # ADD HERE
+        patch_projector = PatchProjector(
+            world=self.world,
+            patch_size=(128, 128),
+            ego_location=ego_vehicle.get_transform())
         ##########################
 
         # Begin applying the sync mode
@@ -215,6 +220,9 @@ class CarlaWorld:
                     wait_frame_ticks += 1
 
                 _, rgb_data, depth_data = sync_mode.tick(timeout=2.0)  # If needed, self.frame can be obtained too
+
+                patch_indices = patch_projector(rgb_image=rgb_data, rgb_camera=self.rgb_camera)
+
                 # Processing raw data
                 rgb_array, bounding_box = self.process_rgb_img(rgb_data, sensor_width, sensor_height)
                 depth_array = self.process_depth_data(depth_data, sensor_width, sensor_height)
@@ -224,12 +232,12 @@ class CarlaWorld:
                 timestamp = round(time.time() * 1000.0)
 
                 # Saving into opened HDF5 dataset file
-                self.HDF5_file.record_data(rgb_array, depth_array, bounding_box, ego_speed, timestamp)
+                self.HDF5_file.record_data(rgb_array, depth_array, bounding_box, ego_speed, timestamp, patch_indices)
                 current_ego_recorded_frames += 1
                 self.total_recorded_frames += 1
                 timestamps.append(timestamp)
 
-                sys.stdout.write("\r")
-                sys.stdout.write('Frame {0}/{1}'.format(
-                    self.total_recorded_frames, frames_to_record_one_ego*egos_to_run*len(self.weather_options)))
-                sys.stdout.flush()
+                # sys.stdout.write("\r")
+                # sys.stdout.write('Frame {0}/{1}'.format(
+                #     self.total_recorded_frames, frames_to_record_one_ego*egos_to_run*len(self.weather_options)))
+                # sys.stdout.flush()

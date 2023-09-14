@@ -8,13 +8,6 @@ import math
 import queue
 
 
-def set_sync_mode(world, fix_delta_sec=0.05):
-    settings = world.get_settings()
-    settings.synchronous_mode = True  # 启用同步模式
-    settings.fixed_delta_seconds = fix_delta_sec
-    world.apply_settings(settings)
-
-
 def get_sensor(world, sensor_type: str, attach_actor: carla.Actor, location=(0, 0, 2), rotation=(0, 0, 0)):
     """
     get sensor(depth camera or rgb camera).

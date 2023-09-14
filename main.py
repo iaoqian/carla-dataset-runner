@@ -32,6 +32,8 @@ Town05 - 150 vehic 150 walk
 import argparse
 import os
 import sys
+from tqdm import tqdm
+
 from CarlaWorld import CarlaWorld
 from HDF5Saver import HDF5Saver
 from utils.create_video_on_hdf5.create_content_on_hdf5 import read_hdf5_test, treat_single_image, create_video_sample
@@ -46,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument('-wa', '--walkers', default=0, type=int, help="number of walkers to spawn in the simulation")
 
     parser.add_argument('-map', '--map', default='Town10HD', help="number of walkers to spawn in the simulation")
+    parser.add_argument('-num_egos', '--num_egos', default=2, type=int, help="number of egos to run")
 
     parser.add_argument('-v', '--video', action="store_true", help="record a mp4 video on top of the recorded hdf5 file")
     parser.add_argument('-d', '--depth', action='store_true', help="show the depth video side by side with the rgb")
@@ -68,18 +71,25 @@ if __name__ == "__main__":
     CarlaWorld = CarlaWorld(HDF5_file=HDF5_file, map_name=args.map)
 
     timestamps = []
-    egos_to_run = 13
+    egos_to_run = args.num_egos
     print('Starting to record data...')
     CarlaWorld.spawn_npcs(number_of_vehicles=args.vehicles, number_of_walkers=args.walkers)
+
+    collected_imgs_cnt = 0
+    pbar_total = tqdm(total=egos_to_run * 5)
     for weather_option in CarlaWorld.weather_options:
         CarlaWorld.set_weather(weather_option)
         ego_vehicle_iteration = 0
         while ego_vehicle_iteration < egos_to_run:
+            pbar_total.set_description(f'collecting image {collected_imgs_cnt + 1}')
             CarlaWorld.begin_data_acquisition(sensor_width, sensor_height, fov,
-                                             frames_to_record_one_ego=2, timestamps=timestamps,
+                                             frames_to_record_one_ego=1, timestamps=timestamps,
                                              egos_to_run=egos_to_run)
-            print('Setting another vehicle as EGO.')
+            # print('Setting another vehicle as EGO.')
+
             ego_vehicle_iteration += 1
+            collected_imgs_cnt += 1
+            pbar_total.update(1)
 
     CarlaWorld.remove_npcs()
     print('Finished simulation.')

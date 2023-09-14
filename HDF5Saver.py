@@ -13,6 +13,7 @@ class HDF5Saver:
         self.depth_group = self.file.create_group("depth")
         self.ego_speed_group = self.file.create_group("ego_speed")
         self.bounding_box_group = self.file.create_group("bounding_box")
+        self.patch_indices_group = self.file.create_group('patch_indices')
 
         self.bb_vehicles_group = self.bounding_box_group.create_group("vehicles")
         self.bb_walkers_group = self.bounding_box_group.create_group("walkers")
@@ -36,7 +37,7 @@ class HDF5Saver:
         self.timestamp_group.attrs['time_format'] = "current time in MILISSECONDS since the unix epoch " \
                                                     "(time.time()*1000 in python3)"
 
-    def record_data(self, rgb_array, depth_array, bounding_box, ego_speed, timestamp):
+    def record_data(self, rgb_array, depth_array, bounding_box, ego_speed, timestamp, patch_indices=None):
 
         timestamp = str(timestamp)
         self.rgb_group.create_dataset(timestamp, data=rgb_array)
@@ -48,6 +49,9 @@ class HDF5Saver:
         # todo: save record data...add arg here
         self.bb_lights_group.create_dataset(timestamp, data=bounding_box[2])
         self.bb_signs_group.create_dataset(timestamp, data=bounding_box[3])
+        ################
+        # save patch indices
+        self.patch_indices_group.create_dataset(timestamp, data=patch_indices)
         ################
 
     def record_all_timestamps(self, timestamps_list):
