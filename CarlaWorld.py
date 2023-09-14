@@ -31,7 +31,7 @@ class CarlaWorld:
         # Sensors stuff
         self.camera_x_location = 1.0
         self.camera_y_location = 0.0
-        self.camera_z_location = 2.0
+        self.camera_z_location = 3.0
         self.sensors_list = []
         # Weather stuff
         self.weather_options = WeatherSelector().get_weather_options()  # List with weather options
@@ -194,32 +194,32 @@ class CarlaWorld:
         ##########################
         patch_projector = PatchProjector(
             world=self.world,
-            patch_size=(128, 128),
-            ego_location=ego_vehicle.get_transform())
+            patch_size=(256, 256),
+            ego_location=self.rgb_camera.get_transform())
         ##########################
 
         # Begin applying the sync mode
         with CarlaSyncMode(self.world, self.rgb_camera, self.depth_camera, fps=30) as sync_mode:
-            # Skip initial frames where the car is being put on the ambient
-            if self.first_time_simulating:
-                for _ in range(30):
-                    sync_mode.tick_no_data()
 
-            # todo： build projector camera (depth camera) array here and project data
+            # Skip initial frames where the car is being put on the ambient
+            # if self.first_time_simulating:
+            #     for _ in range(5):
+            #         sync_mode.tick_no_data()
 
             while True:
                 if current_ego_recorded_frames == frames_to_record_one_ego:
-                    print('\n')
+                    # print('\n')
                     self.remove_sensors()
                     return timestamps
                 # Advance the simulation and wait for the data
                 # Skip every nth frame for data recording, so that one frame is not that similar to another
-                wait_frame_ticks = 0
-                while wait_frame_ticks < 5:
-                    sync_mode.tick_no_data()
-                    wait_frame_ticks += 1
 
-                _, rgb_data, depth_data = sync_mode.tick(timeout=2.0)  # If needed, self.frame can be obtained too
+                # wait_frame_ticks = 0
+                # while wait_frame_ticks < 5:
+                #     sync_mode.tick_no_data()
+                #     wait_frame_ticks += 1
+
+                _, rgb_data, depth_data = sync_mode.tick()  # If needed, self.frame can be obtained too
 
                 patch_indices = patch_projector(rgb_image=rgb_data, rgb_camera=self.rgb_camera)
 

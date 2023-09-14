@@ -32,6 +32,7 @@ Town05 - 150 vehic 150 walk
 import argparse
 import os
 import sys
+import numpy as np
 from tqdm import tqdm
 
 from CarlaWorld import CarlaWorld
@@ -40,6 +41,10 @@ from utils.create_video_on_hdf5.create_content_on_hdf5 import read_hdf5_test, tr
 
 
 if __name__ == "__main__":
+
+    import warnings
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+
     parser = argparse.ArgumentParser(description="Settings for the data capture", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('hdf5_file', default=None, type=str, help='name of hdf5 file to save the data')
     parser.add_argument('-wi', '--width', default=1024, type=int, help="camera rgb and depth sensor width in pixels")
@@ -76,20 +81,20 @@ if __name__ == "__main__":
     CarlaWorld.spawn_npcs(number_of_vehicles=args.vehicles, number_of_walkers=args.walkers)
 
     collected_imgs_cnt = 0
-    pbar_total = tqdm(total=egos_to_run * 5)
-    for weather_option in CarlaWorld.weather_options:
-        CarlaWorld.set_weather(weather_option)
-        ego_vehicle_iteration = 0
-        while ego_vehicle_iteration < egos_to_run:
-            pbar_total.set_description(f'collecting image {collected_imgs_cnt + 1}')
-            CarlaWorld.begin_data_acquisition(sensor_width, sensor_height, fov,
-                                             frames_to_record_one_ego=1, timestamps=timestamps,
-                                             egos_to_run=egos_to_run)
-            # print('Setting another vehicle as EGO.')
+    with tqdm(total=egos_to_run * 5) as pbar_total:
+        for weather_option in CarlaWorld.weather_options:
+            CarlaWorld.set_weather(weather_option)
+            ego_vehicle_iteration = 0
+            while ego_vehicle_iteration < egos_to_run:
+                pbar_total.set_description(f'collecting image {collected_imgs_cnt + 1}')
+                CarlaWorld.begin_data_acquisition(sensor_width, sensor_height, fov,
+                                                 frames_to_record_one_ego=1, timestamps=timestamps,
+                                                 egos_to_run=egos_to_run)
+                # print('Setting another vehicle as EGO.')
 
-            ego_vehicle_iteration += 1
-            collected_imgs_cnt += 1
-            pbar_total.update(1)
+                ego_vehicle_iteration += 1
+                collected_imgs_cnt += 1
+                pbar_total.update(1)
 
     CarlaWorld.remove_npcs()
     print('Finished simulation.')

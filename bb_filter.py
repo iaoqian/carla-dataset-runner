@@ -36,14 +36,14 @@ def apply_filters_to_3d_bb(bb_3d_data, depth_array, sensor_width, sensor_height)
     #########################
 
     valid_bbs = np.asarray([
-        # valid_bb_vehicles.ravel(),
-        # valid_bb_walkers.ravel(),
-        # valid_bb_lights.ravel(),
-        # valid_bb_signs.ravel(),
-        valid_bb_vehicles.reshape(-1),
-        valid_bb_walkers.reshape(-1),
-        valid_bb_lights.reshape(-1),
-        valid_bb_signs.reshape(-1),
+        valid_bb_vehicles.ravel(),
+        valid_bb_walkers.ravel(),
+        valid_bb_lights.ravel(),
+        valid_bb_signs.ravel(),
+        # valid_bb_vehicles.reshape(-1),
+        # valid_bb_walkers.reshape(-1),
+        # valid_bb_lights.reshape(-1),
+        # valid_bb_signs.reshape(-1),
     ])  # Flattening the arrays
     return valid_bbs
 
@@ -236,7 +236,7 @@ def check_if_bbox_has_too_much_occlusion(possible_bb_3d_points, depth_data):
     common_depth = possible_bb_3d_points[0][2]
     depth_data_patch = depth_data[xmin:xmax, ymin:ymax]
     visible_points_count = (common_depth < depth_data_patch).sum()
-    if (visible_points_count / depth_data_patch.size).item() > 0.50:
+    if visible_points_count.item() / (abs(float(depth_data_patch.size)) + 1e-5) > 0.50:
         return xmin, ymin, xmax, ymax
     else:
         return None, None, None, None

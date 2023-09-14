@@ -36,10 +36,15 @@ class PatchSelector:
     @staticmethod
     def _total_variance(p3ds):
         idx = (np.arange(p3ds.shape[1]) + 1) % p3ds.shape[1]
-        return ((p3ds[:, idx] - p3ds)[:, :-1] ** 2.0).sum(axis=0).mean().item()
+        return ((p3ds[:, idx] - p3ds)[:, :-1] ** 2.0).sum(axis=0).mean()
+
+    @staticmethod
+    def _straight(p3ds):
+        z = p3ds[2]
+        return z.max() - z.min()
 
     def __call__(self):
-        self.objects_p3d.sort(key=lambda x: self._total_variance(x))
+        self.objects_p3d.sort(key=lambda x: self._total_variance(x) - 5 * self._straight(x))
         return [self.objects_p3d[0]]
 
 
@@ -61,7 +66,7 @@ class PatchProjector:
             else:
                 return [[ele] for ele in ele_list]
 
-        rotations = [0]
+        rotations = [20, 10, 0, -10, -20]
         locations = [0]
         fovs = [15]
 
@@ -76,14 +81,14 @@ class PatchProjector:
                     prj_depth_camera_bp.set_attribute('image_size_x', str(self.patch_size[1]))
                     prj_depth_camera_bp.set_attribute('image_size_y', str(self.patch_size[0]))
 
-                    ve_x, ve_y, ve_z = spawn_point.location.x, spawn_point.location.y, spawn_point.location.z + 5
+                    ve_x, ve_y, ve_z = spawn_point.location.x, spawn_point.location.y, spawn_point.location.z
                     ve_ya, ve_pi, ve_ro = spawn_point.rotation.yaw, spawn_point.rotation.pitch, spawn_point.rotation.roll
                     x, y, z = location[0] + ve_x, location[1] + ve_y, location[2] + ve_z
                     yaw, pitch, roll = rotation[0] + ve_ya, rotation[1] + ve_pi, rotation[2] + ve_ro
 
                     prj_depth_camera_init_trans = \
-                        carla.Transform(carla.Location(x=x, y=y, z=z),
-                                        carla.Rotation(pitch=pitch, yaw=yaw, roll=roll))
+                        carla.Transform(carla.Location(x=x, y=y, z=z + 5),
+                                        carla.Rotation(pitch=pitch - 15, yaw=yaw, roll=roll))
 
                     prj_depth_camera = self.world.spawn_actor(prj_depth_camera_bp, prj_depth_camera_init_trans,
                                                               attach_to=None,
@@ -117,7 +122,7 @@ class PatchProjector:
 
         for i, object_p3d in enumerate(objects_p3d):
             if object_p3d.shape[1] != self.patch_size[0] * self.patch_size[1]:
-                print('Value Num Error.')
+                # print('Value Num Error.')
                 _object = np.zeros((3, self.patch_size[0] * self.patch_size[1]))
                 object_p3d = object_p3d[:, :min(object_p3d.shape[1], self.patch_size[0] * self.patch_size[1])]
                 _object[:, :object_p3d.shape[1]] = object_p3d

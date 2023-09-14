@@ -55,18 +55,19 @@ class CarlaSyncMode(object):
             make_queue(sensor.listen)
         return self
 
-    def tick(self, timeout):
+    def tick(self):
         self.frame = self.world.tick()
-        data = [self._retrieve_data(q, timeout) for q in self._queues]
+        data = [self._retrieve_data(q) for q in self._queues]
         assert all(x.frame == self.frame for x in data)
         return data
 
     def __exit__(self, *args, **kwargs):
         self.world.apply_settings(self._settings)
 
-    def _retrieve_data(self, sensor_queue, timeout):
+    def _retrieve_data(self, sensor_queue):
         while True:
-            data = sensor_queue.get(timeout=timeout)
+            #
+            data = sensor_queue.get()
             if data.frame == self.frame:
                 return data
 
